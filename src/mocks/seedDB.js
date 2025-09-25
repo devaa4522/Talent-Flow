@@ -1,5 +1,5 @@
 // src/mocks/seedDB.js
-import { db } from '../db.js';
+import { db } from './db.js';
 import { __seeds } from './seeds';
 
 // --- role mappings used to backfill old rows (derived from job.title) ---
