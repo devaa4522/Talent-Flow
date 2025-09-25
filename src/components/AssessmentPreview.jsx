@@ -1,9 +1,43 @@
 import React from 'react'
+import { API } from '../lib/api'
 
-export default function AssessmentPreview({ value }){
-  if(!value) return null
+export default function AssessmentPreview({ value, jobId }){
+  if (!value) return null
+
+  async function onSubmit(e){
+    e.preventDefault()
+    const form = e.currentTarget // keep a stable reference
+    const fd = new FormData(form)
+
+    // Build answers (supports multi-checkbox names like "name[]")
+    const answers = {}
+    for (const [k, v] of fd.entries()) {
+      if (k.endsWith('[]')) {
+        const base = k.slice(0, -2)
+        if (!answers[base]) answers[base] = []
+        answers[base].push(v)
+      } else {
+        answers[k] = v
+      }
+    }
+
+    try {
+      const res = await API.post(`/assessments/${jobId}/submit`, {
+        title: value.title || '',
+        sections: value.sections || [],
+        answers,
+        meta: {},
+      })
+      alert(`Submission saved (id: ${res.id})`)
+      form.reset() // <— use the saved ref, not e.currentTarget
+    } catch (err) {
+      console.error(err)
+      alert('Failed to submit. Please try again.')
+    }
+  }
+
   return (
-    <form onSubmit={e=>{e.preventDefault(); alert('Submit captured (stub)')}}>
+    <form onSubmit={onSubmit}>
       <h4 style={{marginTop:0}}>{value.title || 'Untitled Assessment'}</h4>
       {(value.sections||[]).map((s,si)=>(
         <div key={si} style={{marginBottom:16}}>

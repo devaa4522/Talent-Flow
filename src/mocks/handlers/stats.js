@@ -1,8 +1,16 @@
-import { rest } from 'msw'
-import { __seeds } from '../seeds.js'
+import { rest } from 'msw';
+import { db } from '../db.js';
+import { seedDBIfEmpty } from '../seedDB.js';
+import { withLatency } from './util.js';
 
 export const statsHandlers = [
-  rest.get('/stats', (req, res, ctx)=>{
-    return res(ctx.json({ jobs: __seeds.jobs.length, candidates: __seeds.candidates.length, assessments: 5 }))
-  })
-]
+  rest.get('/stats', async (req, res, ctx) => {
+    await seedDBIfEmpty();
+    await withLatency();
+
+    const jobs = await db.jobs.count();
+    const candidates = await db.candidates.count();
+    const assessments = await db.assessments.count();
+    return res(ctx.json({ jobs, candidates, assessments }));
+  }),
+];

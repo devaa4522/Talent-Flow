@@ -1,77 +1,141 @@
-import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { API } from "../lib/api";
+import React from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { API } from '../lib/api';
 
 export default function JobEditor(){
   const { id } = useParams();
-  const editing = Boolean(id);
-  const [job, setJob] = React.useState({
-    title:"", slug:"", tags:"", status:"active", description:"", requirements:""
-  });
   const nav = useNavigate();
 
-  React.useEffect(() => {
-    if (editing) {
-      API.getJob(id).then(j => setJob({
-        ...j,
-        tags:j.tags || "",
-        requirements:(j.requirements || []).join("\n"),
-      }));
-    }
-  }, [id, editing]);
+  const [form, setForm] = React.useState({
+    title: '',
+    status: 'active',
+    tags: [],
+    description: '',
+    requirements: []
+  });
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState('');
 
-  function save(){
-    const payload = {
-      ...job,
-      tags: job.tags,
-      requirements: (job.requirements || "").split("\n").map(s=>s.trim()).filter(Boolean),
-    };
-    API.updateJob(editing ? id : 0, payload).then(() => nav(`/jobs/${id}`));
+  React.useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const job = await API.get(`/jobs/${id}`);
+        if (!ignore) {
+          setForm({
+            title: job.title || '',
+            status: job.status || 'active',
+            tags: Array.isArray(job.tags) ? job.tags : [],
+            description: job.description || '',
+            requirements: Array.isArray(job.requirements) ? job.requirements : [],
+          });
+          setLoading(false);
+        }
+      } catch (e) {
+        if (!ignore) { setErr('Failed to load job'); setLoading(false); }
+      }
+    })();
+    return () => { ignore = true; }
+  }, [id]);
+
+  function setField(key, val){
+    setForm(prev => ({ ...prev, [key]: val }));
   }
 
+  async function save(e){
+    e.preventDefault();
+    setSaving(true); setErr('');
+    try {
+      const payload = {
+        title: form.title.trim(),
+        status: form.status,
+        tags: form.tags.map(s => String(s).trim()).filter(Boolean),
+        description: form.description,
+        requirements: form.requirements.map(s => String(s).trim()).filter(Boolean),
+      };
+      await API.patch(`/jobs/${id}`, payload);
+      nav(`/jobs/${id}`);
+    } catch (e) {
+      console.error(e);
+      setErr('Save failed. Please retry.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onDelete(){
+    if (!window.confirm('Delete this job? This cannot be undone.')) return;
+    setSaving(true); setErr('');
+    try {
+      await API.delete(`/jobs/${id}`);
+      nav('/jobs');
+    } catch (e) {
+      console.error(e);
+      setErr('Delete failed. Please retry.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="card">Loading…</div>;
+
   return (
-    <div className="grid2">
-      <div className="card pad">
-        <h2 style={{marginTop:0}}>Edit Job</h2>
-
-        <label className="label">Title</label>
-        <input className="input" value={job.title} onChange={e=>setJob({...job, title:e.target.value})}/>
-
-        <label className="label">Slug</label>
-        <input className="input" value={job.slug} onChange={e=>setJob({...job, slug:e.target.value})}/>
-
-        <label className="label">Tags (comma separated)</label>
-        <input className="input" value={job.tags} onChange={e=>setJob({...job, tags:e.target.value})}/>
-
-        <label className="label">Status</label>
-        <select className="select" value={job.status} onChange={e=>setJob({...job, status:e.target.value})}>
-          <option value="active">active</option>
-          <option value="archived">archived</option>
-        </select>
-
-        <label className="label">Description</label>
-        <textarea className="textarea" value={job.description} onChange={e=>setJob({...job, description:e.target.value})}/>
-
-        <label className="label">Requirements (one per line)</label>
-        <textarea className="textarea" value={job.requirements} onChange={e=>setJob({...job, requirements:e.target.value})}/>
-
-        <div className="row" style={{marginTop:12}}>
-          <button className="btn ghost" onClick={()=>nav(-1)} style={{marginRight:8}}>Cancel</button>
-          <button className="btn" onClick={save}>Save</button>
+    <div className="card">
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
+        <h3 style={{marginTop:0}}>Edit Job</h3>
+        <div className="row" style={{gap: 16}}>
+          <Link className="button" to={`/jobs/${id}`}>Cancel</Link>
+          <button className="button danger" onClick={onDelete} disabled={saving}>Delete</button>
+          <button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
         </div>
       </div>
 
-      <div className="card pad">
-        <h3>Preview</h3>
-        <h4 style={{margin:"6px 0"}}>{job.title}</h4>
-        <div className="muted">Slug: {job.slug || "—"}</div>
-        <div className="muted" style={{margin:"6px 0"}}>Tags: {job.tags || "—"}</div>
-        <p>{job.description}</p>
-        <h4>Requirements</h4>
-        <ul>
-          {(job.requirements || "").split("\n").map((r,i)=>r.trim() && <li key={i}>{r.trim()}</li>)}
-        </ul>
-      </div>
+      {err && <div className="callout error" style={{marginTop:8}}>{err}</div>}
+
+      <form onSubmit={save} style={{marginTop:12}}>
+        <label>Title</label>
+        <input className="input" value={form.title} onChange={e => setField('title', e.target.value)} />
+
+        <div className="grid cols-2" style={{gap:12, marginTop:8}}>
+          <div>
+            <label>Status</label>
+            <select className="input" value={form.status} onChange={e=>setField('status', e.target.value)}>
+              <option value="active">active</option>
+              <option value="archived">archived</option>
+            </select>
+          </div>
+          <div>
+            <label>Tags (comma separated)</label>
+            <input
+              className="input"
+              value={form.tags.join(', ')}
+              onChange={e => setField('tags', e.target.value.split(',').map(s=>s.trim()).filter(Boolean))}
+              placeholder="e.g. remote, urgent"
+            />
+          </div>
+        </div>
+
+        <label style={{marginTop:8}}>Description</label>
+        <textarea className="input" rows={4} value={form.description} onChange={e=>setField('description', e.target.value)} />
+
+        <label style={{marginTop:8}}>Requirements (one per line)</label>
+        <textarea
+          className="input"
+          rows={5}
+          value={form.requirements.join('\n')}
+          onChange={e=>setField('requirements', e.target.value.split('\n'))}
+        />
+
+        <div style={{marginTop:12}}>
+          <button className="button primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+        </div>
+      </form>
+
+      <style>{`
+        .button.danger { background:#fee2e2; border:1px solid #fecaca; color:#7f1d1d; }
+        textarea.input { resize: vertical; }
+      `}</style>
     </div>
   );
 }

@@ -1,347 +1,6 @@
-// // import React from 'react'
-// // import { DndContext, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core'
-// // import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
-// // import { CSS } from '@dnd-kit/utilities'
-// // import { API } from '../lib/api'
-
-// // const STAGES = ['applied','screen','tech','offer','hired','rejected']
-
-// // export default function SidePanelKanban({ items }){
-// //   const [stagesVisible, setStagesVisible] = React.useState(['applied','screen','tech'])
-// //   const [byStage, setByStage] = React.useState(()=>group(items))
-// //   React.useEffect(()=>{ setByStage(group(items)) },[items])
-
-// //   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 }}))
-
-// //   function toggleStage(s){
-// //     setStagesVisible(v => v.includes(s) ? v.filter(x=>x!==s) : [...v, s])
-// //   }
-
-// //   function handleDragEnd(e){
-// //     const { active, over } = e
-// //     if(!over) return
-// //     const [fromStage, fromIdx] = active.id.split('::')
-// //     const [toStage, toIdx] = over.id.split('::')
-// //     if(!STAGES.includes(toStage)) return
-
-// //     setByStage(prev=>{
-// //       const src = [...prev[fromStage]]
-// //       const [moved] = src.splice(Number(fromIdx),1)
-// //       moved.stage = toStage
-// //       const dst = [...prev[toStage]]
-// //       dst.splice(Number(toIdx),0,moved)
-// //       return { ...prev, [fromStage]: src, [toStage]: dst }
-// //     })
-// //     API.patch(`/candidates/${active.data.current.candId}`, { stage: toStage }).catch(()=>{})
-// //   }
-
-// //   return (
-// //     <div className="kb">
-// //       <div className="sidebar">
-// //         <strong>Stages</strong>
-// //         {STAGES.map(s=>(
-// //           <div key={s} className={'stage-chip '+(stagesVisible.includes(s)?'active':'')} onClick={()=>toggleStage(s)}>
-// //             <span style={{textTransform:'capitalize'}}>{s}</span>
-// //             <span className="badge">{(byStage[s]||[]).length}</span>
-// //           </div>
-// //         ))}
-// //         <div className="small">Tip: click to show/hide stage columns on the right.</div>
-// //       </div>
-// //       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-// //         <div className="board">
-// //           {STAGES.filter(s=>stagesVisible.includes(s)).map(stage=>(
-// //             <Column key={stage} stage={stage} items={byStage[stage]||[]} />
-// //           ))}
-// //         </div>
-// //       </DndContext>
-// //     </div>
-// //   )
-// // }
-
-// // function Column({ stage, items }){
-// //   return (
-// //     <div className="column">
-// //       <div className="col-head">
-// //         <span style={{textTransform:'capitalize'}}>{stage}</span>
-// //         <span className="badge">{items.length}</span>
-// //       </div>
-// //       <div className="list">
-// //         <SortableContext items={items.map((c,i)=>`${stage}::${i}`)} strategy={verticalListSortingStrategy}>
-// //           {items.map((c,idx)=>(<CandidateCard key={c.id} c={c} idx={idx} stage={stage}/>))}
-// //         </SortableContext>
-// //       </div>
-// //     </div>
-// //   )
-// // }
-
-// // function CandidateCard({ c, idx, stage }){
-// //   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-// //     id: `${stage}::${idx}`,
-// //     data: { candId: c.id }
-// //   })
-// //   const style = { transform: CSS.Transform.toString(transform), transition }
-// //   return (
-// //     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={'card-candidate'+(isDragging?' dragging':'')}>
-// //       <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline'}}>
-// //         <strong>{c.name}</strong>
-// //         <span className="small">{c.email}</span>
-// //       </div>
-// //       <div className="small" style={{marginTop:6}}>Current stage: <b style={{textTransform:'capitalize'}}>{c.stage}</b></div>
-// //     </div>
-// //   )
-// // }
-
-// // function group(items){
-// //   const g = { applied:[], screen:[], tech:[], offer:[], hired:[], rejected:[] }
-// //   for(const it of (items||[])){ (g[it.stage]||g.applied).push(it) }
-// //   return g
-// // }
-
-// import React from 'react'
-// import {
-//   DndContext,
-//   useSensor,
-//   useSensors,
-//   PointerSensor,
-//   closestCorners,
-//   useDroppable
-// } from '@dnd-kit/core'
-// import {
-//   SortableContext,
-//   verticalListSortingStrategy,
-//   useSortable,
-//   arrayMove
-// } from '@dnd-kit/sortable'
-// import { CSS } from '@dnd-kit/utilities'
-// import { API } from '../lib/api'
-
-// const STAGES = ['applied','screen','tech','offer','hired','rejected']
-
-// export default function SidePanelKanban({ items }) {
-//   // Derived data
-//   const [byStage, setByStage] = React.useState(() => group(items))
-//   React.useEffect(() => { setByStage(group(items)) }, [items])
-
-//   // Which list is open on the right: 'all' | stage
-//   const [activeKey, setActiveKey] = React.useState('applied')
-
-//   const sensors = useSensors(
-//     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
-//   )
-
-//   const allItems = React.useMemo(
-//     () => STAGES.flatMap(s => (byStage[s] || []).map(c => ({...c, _stage:s}))),
-//     [byStage]
-//   )
-
-//   function setStage(nextStage) {
-//     setActiveKey(nextStage)
-//   }
-
-//   function handleDragEnd(e) {
-//     const { active, over } = e
-//     if (!over) return
-
-//     const candId = active.data.current?.candId
-//     if (!candId) return
-
-//     // If dropped on a chip, move to that stage (insert at top)
-//     if (typeof over.id === 'string' && over.id.startsWith('chip::')) {
-//       const toStage = over.id.slice('chip::'.length)
-//       if (toStage === 'all') return // no-op
-//       setByStage(prev => {
-//         // find current stage
-//         const currentStage = findStage(prev, candId)
-//         if (!currentStage) return prev
-//         if (currentStage === toStage) return prev
-
-//         const src = [...prev[currentStage]]
-//         const idx = src.findIndex(c => c.id === candId)
-//         if (idx < 0) return prev
-//         const [moved] = src.splice(idx, 1)
-//         moved.stage = toStage
-
-//         const dst = [...prev[toStage]]
-//         dst.splice(0, 0, moved) // drop at top
-
-//         // Persist
-//         API.patch(`/candidates/${candId}`, { stage: toStage }).catch(()=>{})
-
-//         return { ...prev, [currentStage]: src, [toStage]: dst }
-//       })
-//       // Optionally switch view to the target stage for immediate feedback:
-//       setActiveKey(toStage)
-//       return
-//     }
-
-//     // Otherwise, it's a re-order within the currently open list
-//     if (activeKey === 'all') {
-//       // Reorder within the "all" view does not change stage or persist order, so we simply no-op.
-//       return
-//     }
-
-//     // Reorder within the stage list
-//     const overId = over.id
-//     if (!overId) return
-
-//     setByStage(prev => {
-//       const list = [...(prev[activeKey] || [])]
-//       const fromIndex = list.findIndex(c => c.id === candId)
-//       const toIndex = list.findIndex(c => c.id === overId)
-//       if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return prev
-//       const reordered = arrayMove(list, fromIndex, toIndex)
-//       return { ...prev, [activeKey]: reordered }
-//     })
-//   }
-
-//   const rightList = activeKey === 'all' ? allItems : (byStage[activeKey] || [])
-//   const rightListIds = rightList.map(c => c.id)
-
-//   const totalCount = React.useMemo(
-//     () => STAGES.reduce((acc, s) => acc + (byStage[s]?.length || 0), 0),
-//     [byStage]
-//   )
-
-//   return (
-//     <div className="kb one-pane">
-//       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-//         <aside className="sidebar">
-//           <ChipAll
-//             count={totalCount}
-//             active={activeKey === 'all'}
-//             onClick={() => setStage('all')}
-//           />
-//           <div className="sidebar-sep" />
-//           <strong className="sidebar-title">Stages</strong>
-//           <div className="chips">
-//             {STAGES.map(s => (
-//               <ChipStage
-//                 key={s}
-//                 stage={s}
-//                 count={(byStage[s] || []).length}
-//                 active={activeKey === s}
-//                 onClick={() => setStage(s)}
-//               />
-//             ))}
-//           </div>
-//           <div className="small tip">Tip: drag a card onto a stage chip to move it.</div>
-//         </aside>
-
-//         <main className="pane">
-//           <div className="pane-head">
-//             <div className="pane-title">
-//               <span className="capitalize">
-//                 {activeKey === 'all' ? 'All candidates' : activeKey}
-//               </span>
-//               <span className="badge">{rightList.length}</span>
-//             </div>
-//           </div>
-
-//           {/* This is the independently scrollable list */}
-//           <div className="pane-scroll">
-//             <SortableContext items={rightListIds} strategy={verticalListSortingStrategy}>
-//               {rightList.map(c => (
-//                 <CandidateCard
-//                   key={c.id}
-//                   c={c}
-//                   activeKey={activeKey}
-//                   currentStage={activeKey === 'all' ? c._stage : activeKey}
-//                 />
-//               ))}
-//             </SortableContext>
-//           </div>
-//         </main>
-//       </DndContext>
-//     </div>
-//   )
-// }
-
-// function ChipAll({ count, active, onClick }) {
-//   const { setNodeRef, isOver } = useDroppable({ id: 'chip::all' })
-//   return (
-//     <div
-//       ref={setNodeRef}
-//       className={'chip all ' + (active ? 'active ' : '') + (isOver ? 'over ' : '')}
-//       onClick={onClick}
-//     >
-//       <div className="chip-line">
-//         <strong>All</strong>
-//         <span className="badge">{count}</span>
-//       </div>
-//       <div className="small">Click to show every candidate</div>
-//     </div>
-//   )
-// }
-
-// function ChipStage({ stage, count, active, onClick }) {
-//   const { setNodeRef, isOver } = useDroppable({ id: `chip::${stage}` })
-//   return (
-//     <div
-//       ref={setNodeRef}
-//       onClick={onClick}
-//       className={
-//         'stage-chip chip ' +
-//         (active ? 'active ' : '') +
-//         (isOver ? 'over ' : '')
-//       }
-//     >
-//       <span className="capitalize">{stage}</span>
-//       <span className="badge">{count}</span>
-//     </div>
-//   )
-// }
-
-// function CandidateCard({ c, currentStage, activeKey }) {
-//   // Sortable by stable id
-//   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-//     id: c.id,
-//     data: { candId: c.id }
-//   })
-//   const style = { transform: CSS.Transform.toString(transform), transition }
-
-//   return (
-//     <div
-//       ref={setNodeRef}
-//       style={style}
-//       {...attributes}
-//       {...listeners}
-//       className={'card-candidate' + (isDragging ? ' dragging' : '')}
-//     >
-//       <div className="card-top">
-//         <strong>{c.name}</strong>
-//         <span className="small">{c.email}</span>
-//       </div>
-//       <div className="small" style={{ marginTop: 6 }}>
-//         Current stage:&nbsp;
-//         <b className="capitalize">{currentStage}</b>
-//         {activeKey === 'all' && currentStage !== c.stage ? (
-//           <span className="small" style={{ marginLeft: 8, opacity: 0.7 }}>
-//             (source: {c.stage})
-//           </span>
-//         ) : null}
-//       </div>
-//     </div>
-//   )
-// }
-
-// /* ---------- helpers ---------- */
-
-// function group(items) {
-//   const g = { applied:[], screen:[], tech:[], offer:[], hired:[], rejected:[] }
-//   for (const it of (items || [])) {
-//     (g[it.stage] || g.applied).push(it)
-//   }
-//   return g
-// }
-
-// function findStage(byStage, candId) {
-//   for (const s of STAGES) {
-//     if ((byStage[s] || []).some(c => c.id === candId)) return s
-//   }
-//   return null
-// }
-
 import React from 'react'
+import { Link } from 'react-router-dom';
+
 import {
   DndContext,
   useSensor,
@@ -369,7 +28,7 @@ import { API } from '../lib/api'
 
 const STAGES = ['applied','screen','tech','offer','hired','rejected']
 
-export default function SidePanelKanban({ items }) {
+export default function SidePanelKanban({ items, linkToProfile = false }) {
   const [byStage, setByStage] = React.useState(() => group(items))
   React.useEffect(() => { setByStage(group(items)) }, [items])
 
@@ -380,7 +39,7 @@ export default function SidePanelKanban({ items }) {
   )
 
   const allItems = React.useMemo(
-    () => STAGES.flatMap(s => (byStage[s] || []).map(c => ({ ...c, _stage: s }))),
+    () => STAGES.flatMap(s => (byStage[s] || []).map(c => ({ ...c, _stage: s })) ),
     [byStage]
   )
 
@@ -410,7 +69,7 @@ export default function SidePanelKanban({ items }) {
     const candId = active.data.current?.candId
     if (!candId) return
 
-    // Dropped on a chip => move stage
+    // Dropped on a chip => move stage + append timeline
     if (typeof over.id === 'string' && over.id.startsWith('chip::')) {
       const toStage = over.id.slice('chip::'.length)
       if (toStage === 'all') return
@@ -424,12 +83,28 @@ export default function SidePanelKanban({ items }) {
         moved.stage = toStage
         const dst = [...prev[toStage]]
         dst.unshift(moved)
-        API.patch(`/candidates/${candId}`, { stage: toStage }).catch(() => {})
+
+        // ✅ log stage-change in timeline (single line data)
+        const entry = {
+          type: 'stage-change',
+          from: currentStage,
+          to: toStage,
+          at: new Date().toISOString(),
+          note: 'Moved on Kanban',
+          mentions: []
+        }
+        API.patch(`/candidates/${candId}`, {
+          stage: toStage,
+          stageHistoryAppend: entry
+        }).catch(() => {})
+
         return { ...prev, [currentStage]: src, [toStage]: dst }
       })
       setActiveKey(toStage)
       return
     }
+
+
 
     // Within-list reorder (no persist in 'all')
     if (activeKey === 'all') return
@@ -501,7 +176,12 @@ export default function SidePanelKanban({ items }) {
                         transform: `translateY(${vi.start}px)`
                       }}
                     >
-                      <Row c={c} activeKey={activeKey} currentStage={activeKey === 'all' ? c._stage : activeKey} />
+                      <Row
+                        c={c}
+                        activeKey={activeKey}
+                        currentStage={activeKey === 'all' ? c._stage : activeKey}
+                        linkToProfile={linkToProfile}
+                      />
                     </div>
                   )
                 })}
@@ -539,13 +219,28 @@ function ChipStage({ stage, count, active, onClick }) {
 }
 
 /* ---------------- Row (virtual + sortable) ---------------- */
-const Row = React.memo(function Row({ c, currentStage, activeKey }) {
+const Row = React.memo(function Row({ c, currentStage, activeKey, linkToProfile }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: c.id, data: { candId: c.id } })
   const style = { transform: CSS.Transform.toString(transform), transition }
+
+  // Make name clickable without triggering drag: stop mousedown/click bubbling
+  const nameEl = linkToProfile ? (
+    <Link
+      to={`/candidates/${c.id}`}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      {c.name}
+    </Link>
+  ) : (
+    c.name
+  )
+
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={'card-candidate' + (isDragging ? ' dragging' : '')}>
       <div className="card-top">
-        <strong>{c.name}</strong>
+        <strong>{nameEl}</strong>
         <span className="small">{c.email}</span>
       </div>
       <div className="small" style={{ marginTop: 6 }}>
@@ -593,6 +288,7 @@ export const styles = `
 .card-candidate{border:1px solid #ededed;border-radius:12px;padding:10px;background:#fff;margin-bottom:10px;box-shadow:0 0 0 rgba(0,0,0,0);transition:box-shadow .15s ease,transform .15s ease}
 .card-candidate.dragging{box-shadow:0 6px 20px rgba(0,0,0,.08)}
 .card-top{display:flex;justify-content:space-between;align-items:baseline}
+.card-candidate a{color:inherit}
 .small{font-size:12px;color:#555}
 .capitalize{text-transform:capitalize}
 `

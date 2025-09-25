@@ -5,6 +5,8 @@ import JobsPage from './pages/JobsPage.jsx'
 import JobDetailPage from './pages/JobDetailPage.jsx'
 import CandidatesPage from './pages/CandidatesPage.jsx'
 import AssessmentsPage from './pages/AssessmentsPage.jsx'
+import CandidateProfilePage from './pages/CandidateProfilePage.jsx';
+import JobEditor from './pages/JobEditor.jsx';
 
 export default function App(){
   return (
@@ -25,6 +27,10 @@ export default function App(){
           <Route path="/jobs/:id" element={<JobDetailPage/>}/>
           <Route path="/candidates" element={<CandidatesPage/>}/>
           <Route path="/assessments" element={<AssessmentsPage/>}/>
+          <Route path="/candidates" element={<CandidatesPage />} />
+          <Route path="/candidates/:id" element={<CandidateProfilePage />} />
+          <Route path="/jobs/:id" element={<JobDetailPage />} />
+          <Route path="/jobs/:id/edit" element={<JobEditor />} />
         </Routes>
       </div>
     </BrowserRouter>
