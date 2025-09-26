@@ -1,4 +1,3 @@
----
 
 ```markdown
 # 🌟 TalentFlow
@@ -159,9 +158,4 @@ You are free to use, modify, and distribute it with attribution.
 
 ---
 
-```
-
----
-
-Do you want me to also add a **screenshot/GIF preview** of the app in the README so visitors see the UI right away?
 ```
