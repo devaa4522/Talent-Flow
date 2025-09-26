@@ -1,4 +1,3 @@
-
 ---
 
 ```markdown
@@ -8,6 +7,12 @@ TalentFlow is a **modern recruitment and talent management platform** built with
 It provides recruiters and hiring managers with a **complete simulation of an Applicant Tracking System (ATS)** — from job postings and candidate tracking to assessments and analytics.  
 
 Unlike basic demo apps, TalentFlow uses **mock APIs** (via MSW) and an **IndexedDB database** (via Dexie) to create a fully interactive environment without requiring a backend server.
+
+---
+
+## 🌐 Live Demo
+You can try out the project here:  
+👉 [TalentFlow on Vercel](https://talent-flow-topaz-nu.vercel.app/)
 
 ---
 
@@ -158,11 +163,5 @@ You are free to use, modify, and distribute it with attribution.
 
 ---
 
-⚡ This version is **much longer**, professional, and GitHub-friendly:  
-- Highlights **features** clearly.  
-- Explains **project structure**.  
-- Provides **setup + usage** instructions.  
-- Points to `documentation.md` for the full deep dive.  
-
-
+Do you want me to also add a **screenshot/GIF preview** of the app in the README so visitors see the UI right away?
 ```
